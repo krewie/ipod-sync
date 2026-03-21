@@ -1,0 +1,51 @@
+.browse-box {
+    padding: 12px;
+    background: #3a3a3a;
+    border: 1px solid #555;
+    margin-bottom: 16px;
+}
+
+.browse-current-path {
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.browse-nav-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.browse-nav-form input[type="text"] {
+    flex: 1;
+    padding: 8px;
+    background: #2d2d2d;
+    color: #d5d5d5;
+    border: 1px solid #666;
+}
+
+ul {
+    padding-left: 20px;
+}
+
+li.browser-item {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0;
+}
+
+.browser-item-slot {
+    width: 90px;
+}
+
+.browser-item-slot.empty {
+    visibility: hidden;
+}
+
+.browser-item-content {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}

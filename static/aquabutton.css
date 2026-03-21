@@ -1,0 +1,61 @@
+.fancy-button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0.0625em solid #ccc;
+    border-radius: 3.90625em;
+    box-shadow:
+        inset 0 0.40625em 0.78125em rgba(255,255,255,0.5),
+        0 0.09375em 0.15625em rgba(0,0,0,0.2),
+        0 0.3125em 0.40625em rgba(0,0,0,0.1);
+    cursor: pointer;
+    font-family: 'Lucida Grande', Helvetica, Arial, sans-serif;
+    font-size: 1rem;
+    margin: 2.5em 0.5em;
+    padding: 0.6em 2em;
+    position: relative;
+    transition: all ease .3s;
+}
+
+.fancy-button:hover {
+    box-shadow:
+        inset 0 0.40625em 0.78125em rgba(255,255,255,0.8),
+        0 0.09375em 0.15625em rgba(0,0,0,0.2),
+        0 0.3125em 0.40625em rgba(0,0,0,0.2);
+    transform: scale(1.02);
+}
+
+.fancy-button::before {
+    background: linear-gradient(rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 3.90625em;
+    content: '';
+    height: 1.5625em;
+    left: 4%;
+    position: absolute;
+    top: 0.03125em;
+    transition: all ease .3s;
+    width: 92%;
+}
+
+.fancy-button.confirm {
+    background: #4A90E2;
+    border-color: #3672B6;
+    color: #fff;
+}
+
+.fancy-button.cancel {
+    background: #D0D0D0;
+    border-color: #B8B8B8;
+    color: #6F6F6F;
+}
+
+.fancy-button.small {
+    font-size: 0.75rem;
+}
+
+.fancy-button.medium {
+    font-size: 1rem;
+}
+
+.fancy-button.large {
+    font-size: 1.5rem;
+}

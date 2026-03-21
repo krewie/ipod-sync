@@ -1,5 +1,6 @@
 from fasthtml.common import *
 import pygpod
+from pygpod.device.device import Device, StorageInfo, _dir_size, _file_size, _fmt_size
 import urllib.parse
 from pathlib import Path
 from starlette.responses import StreamingResponse, FileResponse
@@ -11,6 +12,8 @@ app = FastHTML(
     pico=True,
     hdrs=[
         Link(rel="stylesheet", href="/static/style.css"),
+        Link(rel="stylesheet", href="/static/browse.css"),
+        Link(rel="stylesheet", href="/static/aquabutton.css"),
         Script(src="/static/app.js", defer=True)
     ]
 )
@@ -61,22 +64,8 @@ def ipod(mountpoint: str):
         Br(), Br(),
         A("[ SHOW TRACKS ]", href=f"/showtracks/{mountpoint}"),
         Br(), Br(),
-        A("[ ADD TRACKS ]", href=f"/addtracks/{mountpoint}")
+        A("[ ADD TRACKS ]", href=f"/browse?mountpoint={mountpoint}")
     )
-
-
-# ----------------------------
-# Add tracks menu
-# ----------------------------
-
-@app.route("/addtracks/{mountpoint:path}")
-def addtracks(mountpoint: str):
-
-    return Div(
-        H1("Add Tracks"),
-        A("Browse Music", href=f"/browse?mountpoint={mountpoint}")
-    )
-
 
 # ----------------------------
 # File browser
@@ -86,7 +75,6 @@ def addtracks(mountpoint: str):
 def browse(folder: str = "~/Music", mountpoint: str = ""):
 
     folder = Path(folder).expanduser()
-
     items = []
 
     for entry in sorted(folder.iterdir()):
@@ -94,31 +82,70 @@ def browse(folder: str = "~/Music", mountpoint: str = ""):
         if entry.is_dir():
             items.append(
                 Li(
-                    A(
-                        f"📁 {entry.name}",
-                        href=f"/browse?folder={urllib.parse.quote(str(entry), safe='')}&mountpoint={urllib.parse.quote(mountpoint, safe='')}"
-                    )
+                    Div("", cls="browser-item-slot empty"),
+                    Div(
+                        A(
+                            f"📁 {entry.name}",
+                            href=f"/browse?folder={urllib.parse.quote(str(entry), safe='')}&mountpoint={urllib.parse.quote(mountpoint, safe='')}"
+                        ),
+                        cls="browser-item-content"
+                    ),
+                    cls="browser-item"
                 )
             )
 
         elif entry.suffix.lower() in (".mp3", ".m4a"):
             items.append(
                 Li(
-                    f"🎵 {entry.name} ",
-                    Button(
-                        "[Add]",
-                        cls="single-import-btn",
-                        **{
-                            "data-file": str(entry),
-                            "data-mountpoint": mountpoint,
-                            "type": "button",
-                        }
-                    )
+                    Div(
+                        Button(
+                            "[Add]",
+                            cls="single-import-btn fancy-button confirm small",
+                            **{
+                                "data-file": str(entry),
+                                "data-mountpoint": mountpoint,
+                                "type": "button",
+                            }
+                        ),
+                        cls="browser-item-slot"
+                    ),
+                    Div(
+                        f"🎵 {entry.name}",
+                        cls="browser-item-content"
+                    ),
+                    cls="browser-item"
                 )
             )
 
+    parent_folder = folder.parent if folder.parent != folder else folder
+
     return Div(
-        H2(f"Browsing: {folder}"),
+        Div(
+            Div(f"Browsing: {folder}", cls="browse-current-path"),
+            Form(
+                Input(
+                    type="text",
+                    name="folder",
+                    value=str(folder),
+                    placeholder="Enter folder path"
+                ),
+                Input(
+                    type="hidden",
+                    name="mountpoint",
+                    value=mountpoint
+                ),
+                Button("Go", type="submit"),
+                action="/browse",
+                method="get",
+                cls="browse-nav-form"
+            ),
+            A(
+                "[ Up ]",
+                href=f"/browse?folder={urllib.parse.quote(str(parent_folder), safe='')}&mountpoint={urllib.parse.quote(mountpoint, safe='')}"
+            ),
+            cls="browse-box"
+        ),
+        Br(),
         A("[ SHOW TRACKS ]", href=f"/showtracks/{mountpoint}"),
         Br(),
         Br(),
@@ -205,7 +232,9 @@ def addsingle(file: str, mountpoint: str):
 def showtracks(mountpoint: str):
 
     db = pygpod.Database(mountpoint)
-
+    dev = Device.from_mountpoint(mountpoint)
+    si = dev.storage_info(full=True)
+    #breakpoint()
     table = Table(
 
         Tr(
@@ -228,6 +257,7 @@ def showtracks(mountpoint: str):
                 Td(
                     Button(
                         "Remove",
+                        cls="fancy-button cancel small",
                         hx_post="/removetrack",
                         hx_vals={
                             "track_id": t.track_id,
@@ -244,8 +274,9 @@ def showtracks(mountpoint: str):
 
     return Div(
         H1("Tracks"),
+        H2(f"Total: {si.total / 1_000_000_000:.2f}GB, Used: {si.used / 1_000_000_000:.2f}GB, Free: {si.free / 1_000_000_000:.2f}GB"),
         A("[ DEVICES ]", href="/"),
-        A("[ ADD TRACKS ]", href=f"/addtracks/{mountpoint}"),
+        A("[ ADD TRACKS ]", href=f"/browse?mountpoint={mountpoint}"),
         Br(), Br(),
         table
     )
