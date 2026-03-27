@@ -232,11 +232,13 @@ def showtracks(mountpoint: str):
     db = pygpod.Database(mountpoint)
     dev = Device.from_mountpoint(mountpoint)
     si = dev.storage_info(full=False)
-    
-    table = Table(
 
+    table = Table(
         Tr(
             Th("ID"),
+            Th("has Artwork"),
+            Th("Track number"),
+            Th("Genre"),
             Th("Title"),
             Th("Artist"),
             Th("Album"),
@@ -247,9 +249,88 @@ def showtracks(mountpoint: str):
         *[
             Tr(
                 Td(t.track_id),
-                Td(t.title),
-                Td(t.artist),
-                Td(t.album),
+                Td(t.has_artwork),
+                Td(
+                    Input(
+                        type="number",
+                        name="track_number",
+                        value=t.track_number or "",
+                        hx_post="/updatetrack",
+                        hx_trigger="change",
+                        hx_vals={
+                            "track_id": t.track_id,
+                            "mountpoint": mountpoint,
+                            "field": "track_number"
+                        },
+                        cls="track-input"
+                    )
+                ),
+
+                Td(
+                    Input(
+                        type="text",
+                        name="genre",
+                        value=t.genre or "",
+                        hx_post="/updatetrack",
+                        hx_trigger="change",
+                        hx_include="this",
+                        hx_vals={
+                            "track_id": t.track_id,
+                            "mountpoint": mountpoint,
+                            "field": "genre"
+                        },
+                        cls="track-input"
+                    )
+                ),
+
+                Td(
+                    Input(
+                        type="text",
+                        name="title",
+                        value=t.title or "",
+                        hx_post="/updatetrack",
+                        hx_trigger="change",
+                        hx_vals={
+                            "track_id": t.track_id,
+                            "mountpoint": mountpoint,
+                            "field": "title"
+                        },
+                        cls="track-input"
+                    )
+                ),
+
+                Td(
+                    Input(
+                        type="text",
+                        name="artist",
+                        value=t.artist or "",
+                        hx_post="/updatetrack",
+                        hx_trigger="change",
+                        hx_vals={
+                            "track_id": t.track_id,
+                            "mountpoint": mountpoint,
+                            "field": "artist"
+                        },
+                        cls="track-input"
+                    )
+                ),
+
+                Td(
+                    Input(
+                        type="text",
+                        name="album",
+                        value=t.album or "",
+                        hx_post="/updatetrack",
+                        hx_trigger="change",
+                        hx_vals={
+                            "track_id": t.track_id,
+                            "mountpoint": mountpoint,
+                            "field": "album"
+                        },
+                        cls="track-input"
+                    )
+                ),
+
                 Td(f"{int(t.duration)//60}:{int(t.duration)%60:02d}"),
 
                 Td(
@@ -279,6 +360,33 @@ def showtracks(mountpoint: str):
         table
     )
 
+#-----------------------------
+# Update track
+#-----------------------------
+
+@app.post("/updatetrack")
+def updatetrack(track_id: str, mountpoint: str, field: str, data: dict):
+    allowed_fields = {"track_number", "genre", "title", "artist", "album"}
+    if field not in allowed_fields:
+        return "Invalid field", 400
+
+    value = data.get(field, "")
+
+    with pygpod.Database(mountpoint) as db:
+        track = next((t for t in db.tracks if str(t.track_id) == str(track_id)), None)
+        if track is None:
+            return "Track not found", 404
+
+        try:
+            converted_value = convert_track_field(field, value)
+            setattr(track, field, converted_value)
+            db.save()
+            return str(getattr(track, field))
+        except ValueError:
+            return f"Invalid value for {field}", 400
+        except Exception as e:
+            print(f"Failed to update {field}: {e}")
+            return f"Could not update {field}", 400
 
 # ----------------------------
 # Remove track

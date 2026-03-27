@@ -70,12 +70,6 @@ td {
     border-bottom: 1px solid #eee;
 }
 
-/* subtle hover like iTunes */
-
-tr:hover {
-    background: #474747;
-}
-
 /* status message */
 
 #status {
@@ -112,4 +106,22 @@ tr:hover {
     height: 12px;
     background: #4caf50;
     transition: width 0.2s ease;
+}
+
+.track-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    border-radius: 4px;
+    padding: 6px 8px;
+}
+
+.track-input:hover {
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 0 1px #6aa9ff;
 }
