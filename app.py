@@ -143,11 +143,9 @@ def browse(folder: str = "~/Music", mountpoint: str = ""):
                 "[ Up ]",
                 href=f"/browse?folder={urllib.parse.quote(str(parent_folder), safe='')}&mountpoint={urllib.parse.quote(mountpoint, safe='')}"
             ),
+            A("[ SHOW TRACKS ]", href=f"/showtracks/{mountpoint}"),
             cls="browse-box"
         ),
-        Br(),
-        A("[ SHOW TRACKS ]", href=f"/showtracks/{mountpoint}"),
-        Br(),
         Br(),
         Button(
             "Add All Music Files",
@@ -233,8 +231,8 @@ def showtracks(mountpoint: str):
 
     db = pygpod.Database(mountpoint)
     dev = Device.from_mountpoint(mountpoint)
-    si = dev.storage_info(full=True)
-    #breakpoint()
+    si = dev.storage_info(full=False)
+    
     table = Table(
 
         Tr(
