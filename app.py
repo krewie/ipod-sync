@@ -229,7 +229,7 @@ def addsingle(file: str, mountpoint: str):
 # ----------------------------
 
 @app.route("/showtracks/{mountpoint:path}")
-def showtracks2(
+def showtracks(
     mountpoint: str,
     artist: str = "",
     album: str = "",
@@ -276,7 +276,7 @@ def showtracks2(
         query_parts = [f"{k}={quote(v)}" for k, v in params.items() if v]
         query = "&".join(query_parts)
 
-        href = f"/showtracks2/{quote(mountpoint, safe='')}"
+        href = f"/showtracks/{quote(mountpoint, safe='')}"
         if query:
             href += f"?{query}"
         return href
@@ -286,7 +286,7 @@ def showtracks2(
             H3(title),
             A(
                 "[ clear ]",
-                href=build_filter_link(filter_name, selected_value) if selected_value else f"/showtracks2/{quote(mountpoint, safe='')}?" + "&".join(
+                href=build_filter_link(filter_name, selected_value) if selected_value else f"/showtracks/{quote(mountpoint, safe='')}?" + "&".join(
                     f"{k}={quote(v)}"
                     for k, v in {
                         "artist": artist if filter_name != "artist" else "",
@@ -331,7 +331,7 @@ def showtracks2(
         ) if any([artist, album, genre, song]) else P("None"),
         A(
             "[ clear all ]",
-            href=f"/showtracks2/{quote(mountpoint, safe='')}",
+            href=f"/showtracks/{quote(mountpoint, safe='')}",
             cls="filter-clear-all"
         ) if any([artist, album, genre, song]) else "",
         cls="active-filters"
