@@ -5,6 +5,8 @@ import urllib.parse
 from pathlib import Path
 from starlette.responses import StreamingResponse, FileResponse
 import sys
+from urllib.parse import quote
+from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 
@@ -14,6 +16,7 @@ app = FastHTML(
         Link(rel="stylesheet", href="/static/style.css"),
         Link(rel="stylesheet", href="/static/browse.css"),
         Link(rel="stylesheet", href="/static/aquabutton.css"),
+        Link(rel="stylesheet", href="/static/showtracks.css"),
         Script(src="/static/app.js", defer=True)
     ]
 )
@@ -221,17 +224,118 @@ def addsingle(file: str, mountpoint: str):
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
-
 # ----------------------------
 # Show tracks
 # ----------------------------
 
 @app.route("/showtracks/{mountpoint:path}")
-def showtracks(mountpoint: str):
-
+def showtracks2(
+    mountpoint: str,
+    artist: str = "",
+    album: str = "",
+    genre: str = "",
+    song: str = ""
+):
     db = pygpod.Database(mountpoint)
     dev = Device.from_mountpoint(mountpoint)
     si = dev.storage_info(full=False)
+
+    tracks = list(db.tracks)
+
+    unique_artists = sorted({t.artist for t in tracks if t.artist})
+    unique_albums = sorted({t.album for t in tracks if t.album})
+    unique_genres = sorted({t.genre for t in tracks if t.genre})
+    unique_songs = sorted({t.title for t in tracks if t.title})
+
+    def matches_filter(track):
+        if artist and (track.artist or "") != artist:
+            return False
+        if album and (track.album or "") != album:
+            return False
+        if genre and (track.genre or "") != genre:
+            return False
+        if song and (track.title or "") != song:
+            return False
+        return True
+
+    filtered_tracks = [t for t in tracks if matches_filter(t)]
+
+    def build_filter_link(filter_name: str, value: str):
+        params = {
+            "artist": artist,
+            "album": album,
+            "genre": genre,
+            "song": song,
+        }
+
+        if params[filter_name] == value:
+            params[filter_name] = ""
+        else:
+            params[filter_name] = value
+
+        query_parts = [f"{k}={quote(v)}" for k, v in params.items() if v]
+        query = "&".join(query_parts)
+
+        href = f"/showtracks2/{quote(mountpoint, safe='')}"
+        if query:
+            href += f"?{query}"
+        return href
+
+    def filter_section(title: str, values: list[str], filter_name: str, selected_value: str):
+        return Div(
+            H3(title),
+            A(
+                "[ clear ]",
+                href=build_filter_link(filter_name, selected_value) if selected_value else f"/showtracks2/{quote(mountpoint, safe='')}?" + "&".join(
+                    f"{k}={quote(v)}"
+                    for k, v in {
+                        "artist": artist if filter_name != "artist" else "",
+                        "album": album if filter_name != "album" else "",
+                        "genre": genre if filter_name != "genre" else "",
+                        "song": song if filter_name != "song" else "",
+                    }.items()
+                    if v
+                ),
+                cls="filter-clear"
+            ),
+            Ul(
+                *[
+                    Li(
+                        A(
+                            value,
+                            href=build_filter_link(filter_name, value),
+                            cls=f"filter-link{' selected' if value == selected_value else ''}"
+                        )
+                    )
+                    for value in values
+                ]
+            ),
+            cls="filter-column"
+        )
+
+    active_filters = Div(
+        H3("Active filters"),
+        Ul(
+            *(
+                [Li(f"Artist: {artist}")] if artist else []
+            ),
+            *(
+                [Li(f"Album: {album}")] if album else []
+            ),
+            *(
+                [Li(f"Genre: {genre}")] if genre else []
+            ),
+            *(
+                [Li(f"Song: {song}")] if song else []
+            ),
+        ) if any([artist, album, genre, song]) else P("None"),
+        A(
+            "[ clear all ]",
+            href=f"/showtracks2/{quote(mountpoint, safe='')}",
+            cls="filter-clear-all"
+        ) if any([artist, album, genre, song]) else "",
+        cls="active-filters"
+    )
 
     table = Table(
         Tr(
@@ -245,7 +349,6 @@ def showtracks(mountpoint: str):
             Th("Time"),
             Th("Action")
         ),
-
         *[
             Tr(
                 Td(t.track_id),
@@ -257,6 +360,7 @@ def showtracks(mountpoint: str):
                         value=t.track_number or "",
                         hx_post="/updatetrack",
                         hx_trigger="change",
+                        hx_include="this",
                         hx_vals={
                             "track_id": t.track_id,
                             "mountpoint": mountpoint,
@@ -265,7 +369,6 @@ def showtracks(mountpoint: str):
                         cls="track-input"
                     )
                 ),
-
                 Td(
                     Input(
                         type="text",
@@ -282,7 +385,6 @@ def showtracks(mountpoint: str):
                         cls="track-input"
                     )
                 ),
-
                 Td(
                     Input(
                         type="text",
@@ -290,6 +392,7 @@ def showtracks(mountpoint: str):
                         value=t.title or "",
                         hx_post="/updatetrack",
                         hx_trigger="change",
+                        hx_include="this",
                         hx_vals={
                             "track_id": t.track_id,
                             "mountpoint": mountpoint,
@@ -298,7 +401,6 @@ def showtracks(mountpoint: str):
                         cls="track-input"
                     )
                 ),
-
                 Td(
                     Input(
                         type="text",
@@ -306,6 +408,7 @@ def showtracks(mountpoint: str):
                         value=t.artist or "",
                         hx_post="/updatetrack",
                         hx_trigger="change",
+                        hx_include="this",
                         hx_vals={
                             "track_id": t.track_id,
                             "mountpoint": mountpoint,
@@ -314,7 +417,6 @@ def showtracks(mountpoint: str):
                         cls="track-input"
                     )
                 ),
-
                 Td(
                     Input(
                         type="text",
@@ -322,6 +424,7 @@ def showtracks(mountpoint: str):
                         value=t.album or "",
                         hx_post="/updatetrack",
                         hx_trigger="change",
+                        hx_include="this",
                         hx_vals={
                             "track_id": t.track_id,
                             "mountpoint": mountpoint,
@@ -330,9 +433,7 @@ def showtracks(mountpoint: str):
                         cls="track-input"
                     )
                 ),
-
                 Td(f"{int(t.duration)//60}:{int(t.duration)%60:02d}"),
-
                 Td(
                     Button(
                         "Remove",
@@ -347,22 +448,52 @@ def showtracks(mountpoint: str):
                     )
                 )
             )
-            for t in db.tracks
-        ]
+            for t in filtered_tracks
+        ],
+        cls="tracks-table"
+    )
+
+    filters = Div(
+        filter_section("Artists", unique_artists, "artist", artist),
+        filter_section("Albums", unique_albums, "album", album),
+        filter_section("Genres", unique_genres, "genre", genre),
+        filter_section("Songs", unique_songs, "song", song),
+        cls="filters-row"
     )
 
     return Div(
         H1("Tracks"),
         H2(f"Total: {si.total / 1_000_000_000:.2f}GB, Used: {si.used / 1_000_000_000:.2f}GB, Free: {si.free / 1_000_000_000:.2f}GB"),
         A("[ DEVICES ]", href="/"),
-        A("[ ADD TRACKS ]", href=f"/browse?mountpoint={mountpoint}"),
+        " ",
+        A("[ ADD TRACKS ]", href=f"/browse?mountpoint={quote(mountpoint, safe='')}"),
+        " ",
+        A("[ SHOWTRACKS ]", href=f"/showtracks/{quote(mountpoint, safe='')}"),
         Br(), Br(),
+
+        active_filters,
+        filters,
+
+        Br(),
+        H3(f"Showing {len(filtered_tracks)} of {len(tracks)} tracks"),
         table
     )
 
 #-----------------------------
 # Update track
 #-----------------------------
+
+def convert_track_field(field: str, value: str):
+    if field == "track_number":
+        try:
+            return int(value) if value != "" else 0
+        except ValueError:
+            raise ValueError("Invalid track number")
+
+    if field in {"genre", "title", "artist", "album"}:
+        return value.strip()
+
+    raise ValueError(f"Invalid field: {field}")
 
 @app.post("/updatetrack")
 def updatetrack(track_id: str, mountpoint: str, field: str, data: dict):
